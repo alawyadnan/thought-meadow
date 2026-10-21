@@ -8,7 +8,7 @@ Write notes, organize folders and tags, pin favorites, preview Markdown, use int
 
 Download thought-meadow-ios-source.zip from this repository or the support site. It contains all native SwiftUI sources, the Xcode project, privacy manifest, MIT license, and native checks. Open Waraqa.xcodeproj and choose the Waraqa scheme; the internal project and bundle identifier retain the original development name for compatibility. iOS 17 or later, iPhone only.
 
-The current release is 1.0.0 (4). The final name is being prepared for Apple submission; public availability is pending. Sync, shared lists and subscriptions are not implemented. The app has not had an independent security audit.
+The current release is 1.0.0 (4). It has been submitted for App Store review and is waiting for Apple’s decision. Public availability is pending. Sync, shared lists and subscriptions are not implemented. The app has not had an independent security audit.
 
 ## Help and privacy
 
