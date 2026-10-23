@@ -23,6 +23,11 @@ struct SettingsView: View {
     @ViewState private var folderToRemove: NoteFolder?
     @ViewState private var showFolderRemoval = false
     @ViewState private var information = false
+    private var appVersion: String {
+        let version = Bundle.main.object(forInfoDictionaryKey:"CFBundleShortVersionString") as? String ?? "—"
+        let build = Bundle.main.object(forInfoDictionaryKey:"CFBundleVersion") as? String ?? "—"
+        return "\(version) (\(build))"
+    }
     var body: some View {
         NavigationStack {
             Form {
@@ -51,7 +56,7 @@ struct SettingsView: View {
                 Section {
                     Button { information = true } label: { Label(L("عن ورقة والخصوصية"),systemImage:"info.circle") }
                     Link(destination:URL(string:"mailto:allaw.68@gmail.com?subject=Thought Meadow%20Support")!) { Label(L("المساعدة والملاحظات"),systemImage:"envelope") }
-                    HStack { Text(L("الإصدار")); Spacer(); Text("1.0.0 (3)").foregroundStyle(.secondary).monospacedDigit() }
+                    HStack { Text(L("الإصدار")); Spacer(); Text(appVersion).foregroundStyle(.secondary).monospacedDigit() }
                     Text(L("المزامنة والقوائم المشتركة مخططة لخدمة اختيارية لاحقًا. لا توجد مدفوعات أو اشتراكات في هذا الإصدار.")).font(.caption).foregroundStyle(.secondary)
                 }
                 if store.notebook.notes.contains(where:\.sample) { Section { Button(L("إزالة الملاحظات التجريبية"),role:.destructive) { removeSamples = true } } footer: { Text(L("تُنقل الأمثلة، بما فيها الأمثلة المعدّلة، إلى المحذوفات. ملاحظاتك الجديدة تبقى كما هي.")) } }
