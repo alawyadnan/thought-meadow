@@ -1,5 +1,35 @@
 import Foundation
 
+struct MarkdownTaskLine {
+    let indentation: String
+    let text: String
+    let isChecked: Bool
+    private let original: String
+    private let stateIndex: String.Index
+
+    init?(_ line: String) {
+        let task = line.drop(while: { $0 == " " || $0 == "\t" })
+        guard task.hasPrefix("- [ ] ") || task.hasPrefix("- [x] ") || task.hasPrefix("- [X] ") else { return nil }
+        original = line
+        indentation = String(line[..<task.startIndex])
+        stateIndex = task.index(task.startIndex, offsetBy: 3)
+        isChecked = line[stateIndex] != " "
+        text = String(task.dropFirst(6))
+    }
+
+    var indentationColumns: Int {
+        indentation.prefix(24).reduce(0) { min(24, $0 + ($1 == "\t" ? 4 : 1)) }
+    }
+
+    func settingChecked(_ checked: Bool) -> String {
+        guard checked != isChecked else { return original }
+        var result = original
+        // Change only the matched checkbox state; preserve indentation and task text verbatim.
+        result.replaceSubrange(stateIndex...stateIndex, with: checked ? "x" : " ")
+        return result
+    }
+}
+
 struct Note: Codable, Identifiable, Hashable {
     var id = UUID().uuidString
     var title = ""

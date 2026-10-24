@@ -48,6 +48,13 @@ import CryptoKit
         guard !locked, let index = notebook.notes.firstIndex(where: { $0.id == id }), notebook.notes[index].status != "trash" else { return }
         transform(&notebook.notes[index]); notebook.notes[index].updated = Date().timeIntervalSince1970 * 1000; changed()
     }
+    func setTaskChecked(_ id: String, line index: Int, checked: Bool) {
+        guard let note = note(id), note.status != "trash", !locked else { return }
+        var lines = note.body.components(separatedBy: "\n")
+        guard lines.indices.contains(index), let task = MarkdownTaskLine(lines[index]), task.isChecked != checked else { return }
+        lines[index] = task.settingChecked(checked)
+        update(id) { $0.body = lines.joined(separator: "\n") }
+    }
     func changed() {
         activity(); dirty = true; saveMessage = "جارٍ الحفظ…"; pending?.cancel()
         pending = Task { [weak self] in

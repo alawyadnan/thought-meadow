@@ -10,6 +10,8 @@ struct ExportDocument: FileDocument {
     func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper { FileWrapper(regularFileWithContents:bytes) }
 }
 struct WaraqaRoot: View {
+    // Updating an input refreshes localized strings without discarding navigation or sheet state.
+    let language: String
     @EnvironmentObject private var store: NotebookStore
     @Environment(\.scenePhase) private var phase
     @ViewState private var path: [String] = []
@@ -66,7 +68,7 @@ struct WaraqaRoot: View {
                             .listRowBackground(Color.clear)
                     }
                     ForEach(notes) { note in
-                        NavigationLink(value:note.id) { NoteRow(note:note) }
+                        NavigationLink(value:note.id) { NoteRow(note:note,language:language) }
                             .swipeActions(edge:.trailing,allowsFullSwipe:false) {
                                 if view != "trash" { Button(role:.destructive) { store.setStatus(note.id,"trash") } label: { Label(L("حذف"),systemImage:"trash") } }
                                 else { Button { store.setStatus(note.id,"active") } label: { Label(L("استعادة"),systemImage:"arrow.uturn.backward") }.tint(.waraqaGreen) }
@@ -91,7 +93,7 @@ struct WaraqaRoot: View {
                         Button { if ["trash","archive"].contains(view) { view = "all" }; if let id = store.addNote(view:view) { path.append(id) } } label: { Label(L("ملاحظة جديدة"),systemImage:"square.and.pencil").font(.subheadline.bold()) }.buttonStyle(.borderedProminent).accessibilityIdentifier("new.note")
                     }.padding(.horizontal,20).padding(.vertical,12).background(.bar)
             }
-            .navigationDestination(for:String.self) { id in NoteEditor(noteID:id) }
+            .navigationDestination(for:String.self) { id in NoteEditor(noteID:id,language:language) }
             .sheet(isPresented:$settings) { SettingsView() }
         }
     }
@@ -132,6 +134,7 @@ struct WaraqaRoot: View {
 }
 struct NoteRow: View {
     let note: Note
+    let language: String
     var body: some View {
         VStack(alignment:.leading,spacing:10) {
             HStack(alignment:.firstTextBaseline) { Text(note.displayTitle).font(.headline).lineLimit(2); Spacer(minLength:5); if note.pinned { Image(systemName:"pin.fill").font(.caption).foregroundStyle(Color.waraqaGreen) } }

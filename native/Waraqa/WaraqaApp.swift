@@ -7,7 +7,7 @@ typealias ViewState<Value> = State<Value>
     @StateObject private var store = NotebookStore()
     @AppStorage("appLanguage") private var language = "system"
     var body: some Scene {
-        WindowGroup { WaraqaRoot().id(language).environmentObject(store).environment(\.layoutDirection,AppLanguage.isArabic ? .rightToLeft : .leftToRight).environment(\.locale,AppLanguage.locale).tint(.waraqaGreen) }
+        WindowGroup { WaraqaRoot(language:language).environmentObject(store).environment(\.layoutDirection,AppLanguage.isArabic ? .rightToLeft : .leftToRight).environment(\.locale,AppLanguage.locale).tint(.waraqaGreen) }
     }
 }
 extension Color {

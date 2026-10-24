@@ -5,6 +5,7 @@ struct NoteEditor: View {
     @EnvironmentObject private var store: NotebookStore
     @Environment(\.dismiss) private var dismiss
     let noteID: String
+    let language: String
     @ViewState private var preview = false
     @ViewState private var focus = false
     @ViewState private var tagsEditor = false
@@ -34,8 +35,8 @@ struct NoteEditor: View {
                                 if note.status != "trash" { Button { tags = note.tags.joined(separator:"، "); tagsEditor = true } label: { Label(L("وسم"),systemImage:"plus") }.font(.caption).buttonStyle(.bordered) }
                                 Spacer(minLength:0)
                             }
-                            if preview || note.status == "trash" { NativePreview(body:note.body,readOnly:note.status == "trash") { index, checked in
-                                store.update(noteID) { n in var lines = n.body.components(separatedBy:"\n"); guard lines.indices.contains(index), lines[index].count >= 6 else { return }; lines[index] = (checked ? "- [x] " : "- [ ] ") + lines[index].dropFirst(6); n.body = lines.joined(separator:"\n") }
+                            if preview || note.status == "trash" { NativePreview(body:note.body,readOnly:note.status == "trash",language:language) { index, checked in
+                                store.setTaskChecked(noteID,line:index,checked:checked)
                             }}
                             else {
                                 TextEditor(text:Binding(get:{ store.note(noteID)?.body ?? "" },set:{ value in store.update(noteID) { $0.body = String(value.prefix(200_000)) } })).font(.body).lineSpacing(8).frame(minHeight:420).scrollContentBackground(.hidden).accessibilityLabel(L("محتوى الملاحظة")).accessibilityIdentifier("note.body")
@@ -81,14 +82,14 @@ struct NoteEditor: View {
 struct NativePreview: View {
     let bodyText: String
     let readOnly: Bool
+    let language: String
     let onTask: (Int,Bool) -> Void
-    init(body: String, readOnly: Bool, onTask: @escaping (Int,Bool) -> Void) { bodyText = body; self.readOnly = readOnly; self.onTask = onTask }
+    init(body: String, readOnly: Bool, language: String, onTask: @escaping (Int,Bool) -> Void) { bodyText = body; self.readOnly = readOnly; self.language = language; self.onTask = onTask }
     var body: some View {
         VStack(alignment:.leading,spacing:12) {
             ForEach(Array(bodyText.components(separatedBy:"\n").enumerated()),id:\.offset) { index, line in
-                if line.hasPrefix("- [ ] ") || line.lowercased().hasPrefix("- [x] ") {
-                    let checked = line.lowercased().hasPrefix("- [x]")
-                    Button { onTask(index,!checked) } label: { HStack(alignment:.firstTextBaseline,spacing:10) { Image(systemName:checked ? "checkmark.circle.fill" : "circle").foregroundStyle(Color.waraqaGreen); Text(String(line.dropFirst(6))).strikethrough(checked).foregroundStyle(checked ? .secondary : .primary); Spacer(minLength:0) } }.buttonStyle(.plain).disabled(readOnly).accessibilityValue(checked ? L("مكتملة") : L("غير مكتملة"))
+                if let task = MarkdownTaskLine(line) {
+                    Button { onTask(index,!task.isChecked) } label: { HStack(alignment:.firstTextBaseline,spacing:10) { Image(systemName:task.isChecked ? "checkmark.circle.fill" : "circle").foregroundStyle(Color.waraqaGreen); Text(task.text).strikethrough(task.isChecked).foregroundStyle(task.isChecked ? .secondary : .primary); Spacer(minLength:0) } }.buttonStyle(.plain).padding(.leading,CGFloat(min(12,task.indentationColumns)) * 6).disabled(readOnly).accessibilityValue(task.isChecked ? L("مكتملة") : L("غير مكتملة")).accessibilityIdentifier("note.task.\(index)")
                 } else if line.hasPrefix("# ") { Text(String(line.dropFirst(2))).font(.title.bold()).padding(.top,8) }
                 else if line.hasPrefix("## ") { Text(String(line.dropFirst(3))).font(.title3.bold()).padding(.top,15) }
                 else if line.hasPrefix("### ") { Text(String(line.dropFirst(4))).font(.headline).padding(.top,8) }
