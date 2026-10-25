@@ -37,3 +37,23 @@ English starts here and ends بالعربية
 On iPhone 17 Pro Max Simulator, iOS 26.4.1, with English app chrome and the maintenance source above, Preview exposed three task controls. Toggling line 2 (the indented Ship task; zero-based line index) changed only its checkbox state. The raw body matched the expected text, including spaces and the other task states. After returning to the list and reopening the note, the Ship task remained completed and the other two states remained unchanged. Input used Device Hub hardware-keyboard capture. This verifies this concrete rendering/toggle/reopen path, not physical-phone caret, spoken order, or a live language transition.
 
 For the physical-phone pass, record the selection/caret anchor, first visible paragraph/scroll position, keyboard state and the VoiceOver utterances/focus sequence before and after the supported language transition. Include this English-leading/Arabic-ending task and an Arabic-leading paragraph. Record whether any language/direction announcement occurs and whether the text is read in the expected logical order; do not mark the check as passing from accessibility labels alone or require a particular announcement without observing the actual iOS behaviour. Keep OS-triggered app relaunches separate from a live environment update. These physical-phone checks remain pending.
+
+## Directional VoiceOver and immediate-focus cases — 25 October 2026
+
+Following cocoabuilder's additional review, run each transition independently. A result for one direction does not establish the reverse direction, and spoken order alone does not establish useful focus placement.
+
+| Starting surface | Language transition | Input state to record | Physical-phone result |
+| --- | --- | --- | --- |
+| Write | English → Arabic | Caret/selection and on-screen keyboard before leaving the editor | Pending |
+| Write | Arabic → English | Caret/selection and on-screen keyboard before leaving the editor | Pending |
+| Preview | English → Arabic | Focused paragraph or task and its checked state | Pending |
+| Preview | Arabic → English | Focused paragraph or task and its checked state | Pending |
+
+For each case, record:
+
+1. The focused element's role, label and logical location before the transition, plus the visible paragraph and keyboard state where relevant.
+2. The first VoiceOver focus target immediately after the transition, before any swipe, tap or other action that could repair or move focus. Record whether it returns to the same context, moves to the top, or lands in app chrome. A matching spoken transcript alone is not a pass.
+3. The actual announcement/utterance sequence and subsequent focus order separately. Record observed language/direction announcements, including their absence; do not assume the two transition directions behave alike.
+4. Focus and editor state when returning to the note through the supported navigation route. The current app-language control is in root Settings: record the immediate post-switch target there separately from the editor target after navigating back. Do not describe leaving and reopening the editor as an in-place switch with the keyboard continuously open. Record any OS-triggered relaunch separately.
+
+Use the same mixed-script fixture in all four cases and record device, iOS/app version, VoiceOver language/voice settings and the exact route used. All four physical-phone results remain pending; no new runtime defect or verified physical-phone result is established by adding this matrix.
