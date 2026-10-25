@@ -9,7 +9,7 @@ Use fictional notes only. Record the device, iOS version, app version and input 
 - Preview exposes three separate task buttons and their completed/not-completed accessibility values. Toggling the space-indented task changes only its checkbox state. Returning to Write preserves indentation, the other task states and mixed-script content.
 - Return to the list and reopen the note: the selected nested task remains completed. This is an in-app reopen check; cold-start persistence is separately covered by native data checks.
 
-Tested maintenance source used the existing 1.0.1 (5) development metadata; the store build does not contain these source changes yet. Input was supplied through Device Hub with hardware-keyboard capture. This is not a physical-phone or on-screen-keyboard result.
+The 24 October simulator checks used maintenance source with the existing 1.0.1 (5) development metadata. That source was subsequently shipped as 1.0.2 (6); the public App Store page was confirmed to show version 1.0.2 on 25 October. Input was supplied through Device Hub with hardware-keyboard capture. This is not a physical-phone or on-screen-keyboard result.
 
 ## Physical-device matrix still pending
 
@@ -21,3 +21,19 @@ Tested maintenance source used the existing 1.0.1 (5) development metadata; the 
 6. **Long-note scrolling:** scroll both within and around TextEditor with the software keyboard open. Verify interactive keyboard dismissal, reaching the beginning/end and editing after a scroll, including smaller screens and larger Dynamic Type sizes.
 
 TextEditor and the encryption implementation remain unchanged in this maintenance patch. Do not report the pending cases as passing or call the application independently security-audited.
+
+## Focused mixed-script fixture — 25 October 2026
+
+Added after the reviews by imsnk81 and cocoabuilder. Copy the following fictional body into a fresh note:
+
+```text
+English starts here and ends بالعربية
+- [ ] Review plan (v2) ثم راجع العربية
+  - [ ] Ship build 6 ثم انتهى
+العربية أولًا ثم English (123).
+- [x] English completed ثم اكتمل
+```
+
+On iPhone 17 Pro Max Simulator, iOS 26.4.1, with English app chrome and the maintenance source above, Preview exposed three task controls. Toggling line 2 (the indented Ship task; zero-based line index) changed only its checkbox state. The raw body matched the expected text, including spaces and the other task states. After returning to the list and reopening the note, the Ship task remained completed and the other two states remained unchanged. Input used Device Hub hardware-keyboard capture. This verifies this concrete rendering/toggle/reopen path, not physical-phone caret, spoken order, or a live language transition.
+
+For the physical-phone pass, record the selection/caret anchor, first visible paragraph/scroll position, keyboard state and the VoiceOver utterances/focus sequence before and after the supported language transition. Include this English-leading/Arabic-ending task and an Arabic-leading paragraph. Record whether any language/direction announcement occurs and whether the text is read in the expected logical order; do not mark the check as passing from accessibility labels alone or require a particular announcement without observing the actual iOS behaviour. Keep OS-triggered app relaunches separate from a live environment update. These physical-phone checks remain pending.
