@@ -44,7 +44,7 @@ struct SettingsView: View {
                 Section {
                     Button { exportBackup() } label: { Label(store.isEncrypted ? L("تصدير نسخة مشفرة") : L("تصدير نسخة احتياطية"),systemImage:"square.and.arrow.up") }
                     Button { importer = true } label: { Label(L("استيراد ملاحظات"),systemImage:"square.and.arrow.down") }
-                } header: { Text(L("نسخة من أفكارك")) } footer: { Text(L("حذف التطبيق يزيل ملاحظاته المحلية. احتفظ بنسخ خارج التطبيق. ") + (store.isEncrypted ? L("النسخة الكاملة مشفرة بكلمة مرور المساحة.") : L("النسخة الحالية قابلة للقراءة؛ احفظها في مكان موثوق."))) }
+                } header: { Text(L("نسخة من أفكارك")) } footer: { Text(L("ملاحظاتك غير مشمولة بنسخ iPhone الاحتياطية التلقائية. صدّر نسخة دورية عبر تطبيق الملفات واحتفظ بها خارج هذا الجهاز. حذف التطبيق يزيل ملاحظاته المحلية. ") + (store.isEncrypted ? L("النسخة الكاملة مشفرة بكلمة مرور المساحة.") : L("النسخة الحالية قابلة للقراءة؛ احفظها في مكان موثوق."))) }
                 Section {
                     if store.isEncrypted { Label(L("القفل المشفر مفعّل"),systemImage:"lock.shield"); Button(L("قفل المساحة الآن")) { dismiss(); store.lock() } }
                     else { Button { localError = ""; encryptionSheet = true } label: { Label(L("تفعيل القفل المشفر"),systemImage:"lock") } }
@@ -61,9 +61,12 @@ struct SettingsView: View {
                 }
                 if store.notebook.notes.contains(where:\.sample) { Section { Button(L("إزالة الملاحظات التجريبية"),role:.destructive) { removeSamples = true } } footer: { Text(L("تُنقل الأمثلة، بما فيها الأمثلة المعدّلة، إلى المحذوفات. ملاحظاتك الجديدة تبقى كما هي.")) } }
             }
+            // Refresh only the form when direction changes; reused cells can remain mirrored.
+            // Settings state and the note editor's navigation stay outside this identity.
+            .id(AppLanguage.isArabic)
             .navigationTitle(L("إعدادات مساحتك")).navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement:.confirmationAction) { Button(L("تم")) { dismiss() } } }
-            .fileExporter(isPresented:$exporter,document:document,contentType:.json,defaultFilename:"alawynote-backup.json") { result in if case .failure(let error) = result { store.error = error.localizedDescription }; document = nil }
+            .fileExporter(isPresented:$exporter,document:document,contentType:.json,defaultFilename:"thought-meadow-backup.json") { result in if case .failure(let error) = result { store.error = error.localizedDescription }; document = nil }
             .fileImporter(isPresented:$importer,allowedContentTypes:[.json,.plainText,.data]) { result in
                 do { let url = try result.get(), access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }; incomingEnvelope = try store.readImport(url); incoming = incomingEnvelope?.data; importPassword = ""; localError = ""; importSheet = true }
                 catch { store.error = error.localizedDescription }
@@ -75,6 +78,8 @@ struct SettingsView: View {
             .confirmationDialog(L("نقل جميع الأمثلة إلى المحذوفات؟"),isPresented:$removeSamples,titleVisibility:.visible) { Button(L("نقل الأمثلة"),role:.destructive) { store.removeSamples() } }
             .confirmationDialog(L("إزالة المجلد؟ ستبقى ملاحظاته محفوظة دون مجلد."),isPresented:$showFolderRemoval,titleVisibility:.visible) { Button(L("إزالة المجلد"),role:.destructive) { if let f = folderToRemove { store.removeFolder(f.id) } } }
         }
+        .environment(\.layoutDirection,AppLanguage.isArabic ? .rightToLeft : .leftToRight)
+        .environment(\.locale,AppLanguage.locale)
     }
     private func exportBackup() { do { document = ExportDocument(bytes:try store.backup()); exporter = true } catch { store.error = error.localizedDescription } }
     private var encryptionForm: some View {
@@ -106,7 +111,7 @@ struct SettingsView: View {
                 Section(L("مساحة لأفكارك")) { Text(L("ورقة تطبيق ملاحظات عربي أصلي لـ iPhone، مجاني ومفتوح المصدر برخصة MIT. لا يحتاج إلى حساب أو اتصال بالإنترنت.")) }
                 Section(L("البيانات")) { Text(L("لا يرسل التطبيق الملاحظات أو كلمات المرور إلى خادم، ولا يحتوي على أدوات تتبّع أو إعلانات أو مكتبات خارجية. عند التصدير تختار أنت أين يُحفظ الملف، وقد تختار خدمة سحابية من تطبيق الملفات.")) }
                 Section(L("القفل والتخزين")) { Text(L("قبل تفعيل القفل، ملفات البيانات قابلة للقراءة داخل مساحة التطبيق وتخضع لحماية iOS. القفل الاختياري يستخدم AES-256-GCM واشتقاق مفتاح PBKDF2-SHA-256 مع ٦٠٠ ألف دورة. المفتاح يبقى في الذاكرة أثناء الفتح. لا يحمي القفل جهازًا مخترقًا.")) }
-                Section(L("نسخ احتياطية")) { Text(L("استبعدنا مجلد البيانات من النسخ السحابي التلقائي. حذف التطبيق قد يحذف ملاحظاتك. صدّر نسخة دورية خارج التطبيق؛ احتفظ بكلمة مرور النسخة المشفرة. النسخة المحلية السابقة ليست بديلًا عن نسخة خارج الجهاز.")) }
+                Section(L("نسخ احتياطية")) { Text(L("ملاحظاتك غير مشمولة بنسخ iPhone الاحتياطية التلقائية. حذف التطبيق قد يحذف ملاحظاتك. صدّر نسخة دورية عبر تطبيق الملفات واحتفظ بها خارج هذا الجهاز؛ احتفظ بكلمة مرور النسخة المشفرة. النسخة المحلية السابقة ليست بديلًا عن نسخة خارج الجهاز.")) }
                 Section(L("إصدار أول")) { Text(L("لم يخضع التطبيق لتدقيق أمني مستقل بعد. المزامنة والقوائم المشتركة والاشتراك ليست متاحة حاليًا.")) }
                 Section("MIT License") { Text("Copyright © 2026 Waraqa contributors\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files, to deal in the Software without restriction, including the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies, subject to retaining this notice and the MIT license.\n\nTHE SOFTWARE IS PROVIDED AS IS, WITHOUT WARRANTY OF ANY KIND. See the full LICENSE in the source distribution.").font(.caption).environment(\.layoutDirection,.leftToRight) }
             }.navigationTitle(L("عن ورقة والخصوصية")).navigationBarTitleDisplayMode(.inline).toolbar { ToolbarItem(placement:.confirmationAction) { Button(L("تم")) { information = false } } }
