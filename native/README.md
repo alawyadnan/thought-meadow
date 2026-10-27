@@ -4,6 +4,14 @@ This directory contains the browsable SwiftUI source, Xcode project, app assets,
 
 [App Store](https://apps.apple.com/us/app/thought-meadow-private-notes/id6825094170) · [Support and privacy](https://alawyadnan.github.io/thought-meadow/)
 
+## Maintenance 1.0.3 (7) — submitted 28 October 2026
+
+Version 1.0.3 (7) is **Waiting for Review** at Apple; submission does not mean the update is approved or live. Version 1.0.2 was the public release at this check.
+
+This update adds a permanent backup reminder next to Export in English/Arabic and the `thought-meadow-backup.json` filename. It also applies the selected locale and direction to Settings, refreshing only its Form when direction changes so the root/editor identity is retained. The 26 existing native checks and unsigned iOS/Simulator builds passed. On iPhone 17e Simulator / iOS 26.4.1, Settings stayed open and aligned correctly in both directions; the Files export sheet saved a fictional sample without error. Physical-iPhone editor and VoiceOver checks remain pending in the interaction matrix.
+
+Read [product principles](PRODUCT_PRINCIPLES.md) and [working guidance](AGENTS.md) before changing the experience. Preserve immediate writing, a calm usable interface, lightweight optional organization and equal Arabic/English support.
+
 ## Build
 
 Open `Waraqa.xcodeproj` in Xcode and choose the `Waraqa` scheme. The app requires iOS 17 or later and targets iPhone. The internal name and bundle identifier retain the original development name for data compatibility. For your own signed build, select your own development team and bundle identifier.
@@ -27,7 +35,7 @@ The scale checks create 500 fictional notes and verify save/reopen, search, tag 
 
 ## Storage and encryption
 
-Notes are stored locally using atomic writes and iOS complete file protection. Optional notebook encryption uses AES-256-GCM with PBKDF2-SHA-256 and 600,000 iterations. A password cannot be recovered. Export backups through Files; deleting the app can delete local notes. The app has not had an independent security audit. Sync, shared lists and subscriptions are not implemented in this release.
+Notes are stored locally using atomic writes and iOS complete file protection. Optional notebook encryption uses AES-256-GCM with PBKDF2-SHA-256 and 600,000 iterations. A password cannot be recovered. Notes are excluded from automatic device backups: export copies regularly through Files and keep them outside the device; deleting the app can delete local notes. The app has not had an independent security audit. Sync, shared lists and subscriptions are not implemented in this release.
 
 
 ## Checklist and language maintenance — 24 October 2026
