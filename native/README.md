@@ -4,9 +4,22 @@ This directory contains the browsable SwiftUI source, Xcode project, app assets,
 
 [App Store](https://apps.apple.com/us/app/thought-meadow-private-notes/id6825094170) · [Support and privacy](https://alawyadnan.github.io/thought-meadow/)
 
+## Feedback maintenance — 3 November 2026 (unreleased)
+
+Arabic search now ignores harakat in both the query and searchable title/body/tag copies. Stored note text remains unchanged. A quiet line beside save status shows the last completed full-export age and opens Settings. Only a successful Files exporter completion records the timestamp; preparing/cancelling/failing an export or exporting a single Markdown note does not reset it. Older exports are untracked. The timestamp does not establish that the file still exists or is stored outside the device.
+
+Import completion reports the actual added notes and newly created folders after the notebook is saved, keeping existing notes and imported Archive/Trash states. The existing duplicate-import warning remains.
+
+The 21 targeted feedback checks, 26 native checks and 14 checklist checks passed on macOS. Unsigned iOS and Simulator builds passed. Interactive UI verification of these changes and the existing physical-iPhone editor/VoiceOver cases remain pending. These changes have not been uploaded as a new App Store update.
+
+```sh
+xcrun swiftc -parse-as-library -O -module-cache-path /tmp/ThoughtMeadowFeedbackCache Waraqa/Models.swift Waraqa/VaultCrypto.swift Waraqa/NotebookStore.swift Tests/FeedbackChecks.swift -o /tmp/thought-meadow-feedback-checks
+/tmp/thought-meadow-feedback-checks
+```
+
 ## Maintenance 1.0.3 (7) — submitted 28 October 2026
 
-Version 1.0.3 (7) is **Waiting for Review** at Apple; submission does not mean the update is approved or live. Version 1.0.2 was the public release at this check.
+At the 28 October submission, version 1.0.3 (7) showed **Waiting for Review** at Apple; submission does not mean the update is approved or live. Version 1.0.2 was the public release at that check.
 
 This update adds a permanent backup reminder next to Export in English/Arabic and the `thought-meadow-backup.json` filename. It also applies the selected locale and direction to Settings, refreshing only its Form when direction changes so the root/editor identity is retained. The 26 existing native checks and unsigned iOS/Simulator builds passed. On iPhone 17e Simulator / iOS 26.4.1, Settings stayed open and aligned correctly in both directions; the Files export sheet saved a fictional sample without error. Physical-iPhone editor and VoiceOver checks remain pending in the interaction matrix.
 
