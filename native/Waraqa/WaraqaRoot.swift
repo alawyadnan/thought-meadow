@@ -14,6 +14,7 @@ struct WaraqaRoot: View {
     let language: String
     @EnvironmentObject private var store: NotebookStore
     @Environment(\.scenePhase) private var phase
+    @AppStorage(BackupExportHistory.defaultsKey) private var lastBackupExport = 0.0
     @ViewState private var path: [String] = []
     @ViewState private var view = "all"
     @ViewState private var query = ""
@@ -88,7 +89,18 @@ struct WaraqaRoot: View {
             }
             .safeAreaInset(edge:.bottom) {
                     HStack(spacing:16) {
-                        Label(store.saveLabel,systemImage:store.saveFailed ? "exclamationmark.triangle" : "checkmark.shield").font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("save.status")
+                        VStack(alignment:.leading,spacing:4) {
+                            Label(store.saveLabel,systemImage:store.saveFailed ? "exclamationmark.triangle" : "checkmark.shield").font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("save.status")
+                            TimelineView(.periodic(from:.now,by:60)) { context in
+                                Button { settings = true } label: {
+                                    Text(BackupExportHistory.label(lastBackupExport,now:context.date))
+                                        .font(.caption2).foregroundStyle(.secondary).multilineTextAlignment(.leading)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityHint(L("افتح الإعدادات لتصدير نسخة عبر الملفات."))
+                                .accessibilityIdentifier("backup.export.status")
+                            }
+                        }
                         Spacer()
                         Button { if ["trash","archive"].contains(view) { view = "all" }; if let id = store.addNote(view:view) { path.append(id) } } label: { Label(L("ملاحظة جديدة"),systemImage:"square.and.pencil").font(.subheadline.bold()) }.buttonStyle(.borderedProminent).accessibilityIdentifier("new.note")
                     }.padding(.horizontal,20).padding(.vertical,12).background(.bar)
