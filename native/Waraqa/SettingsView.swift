@@ -5,6 +5,7 @@ struct SettingsView: View {
     @EnvironmentObject private var store: NotebookStore
     @Environment(\.dismiss) private var dismiss
     @AppStorage("appLanguage") private var language = "system"
+    @AppStorage(BackupExportHistory.defaultsKey) private var lastBackupExport = 0.0
     @ViewState private var encryptionSheet = false
     @ViewState private var password = ""
     @ViewState private var confirmation = ""
@@ -14,6 +15,8 @@ struct SettingsView: View {
     @ViewState private var document: ExportDocument?
     @ViewState private var importer = false
     @ViewState private var importSheet = false
+    @ViewState private var importSummary: ImportSummary?
+    @ViewState private var showImportSummary = false
     @ViewState private var incomingEnvelope: VaultEnvelope?
     @ViewState private var incoming: Notebook?
     @ViewState private var importPassword = ""
@@ -44,7 +47,14 @@ struct SettingsView: View {
                 Section {
                     Button { exportBackup() } label: { Label(store.isEncrypted ? L("تصدير نسخة مشفرة") : L("تصدير نسخة احتياطية"),systemImage:"square.and.arrow.up") }
                     Button { importer = true } label: { Label(L("استيراد ملاحظات"),systemImage:"square.and.arrow.down") }
-                } header: { Text(L("نسخة من أفكارك")) } footer: { Text(L("ملاحظاتك غير مشمولة بنسخ iPhone الاحتياطية التلقائية. صدّر نسخة دورية عبر تطبيق الملفات واحتفظ بها خارج هذا الجهاز. حذف التطبيق يزيل ملاحظاته المحلية. ") + (store.isEncrypted ? L("النسخة الكاملة مشفرة بكلمة مرور المساحة.") : L("النسخة الحالية قابلة للقراءة؛ احفظها في مكان موثوق."))) }
+                } header: { Text(L("نسخة من أفكارك")) } footer: {
+                    VStack(alignment:.leading,spacing:6) {
+                        TimelineView(.periodic(from:.now,by:60)) { context in
+                            Text(BackupExportHistory.label(lastBackupExport,now:context.date))
+                        }
+                        Text(L("ملاحظاتك غير مشمولة بنسخ iPhone الاحتياطية التلقائية. صدّر نسخة دورية عبر تطبيق الملفات واحتفظ بها خارج هذا الجهاز. حذف التطبيق يزيل ملاحظاته المحلية. ") + (store.isEncrypted ? L("النسخة الكاملة مشفرة بكلمة مرور المساحة.") : L("النسخة الحالية قابلة للقراءة؛ احفظها في مكان موثوق.")))
+                    }
+                }
                 Section {
                     if store.isEncrypted { Label(L("القفل المشفر مفعّل"),systemImage:"lock.shield"); Button(L("قفل المساحة الآن")) { dismiss(); store.lock() } }
                     else { Button { localError = ""; encryptionSheet = true } label: { Label(L("تفعيل القفل المشفر"),systemImage:"lock") } }
@@ -66,14 +76,24 @@ struct SettingsView: View {
             .id(AppLanguage.isArabic)
             .navigationTitle(L("إعدادات مساحتك")).navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement:.confirmationAction) { Button(L("تم")) { dismiss() } } }
-            .fileExporter(isPresented:$exporter,document:document,contentType:.json,defaultFilename:"thought-meadow-backup.json") { result in if case .failure(let error) = result { store.error = error.localizedDescription }; document = nil }
+            .fileExporter(isPresented:$exporter,document:document,contentType:.json,defaultFilename:"thought-meadow-backup.json") { result in
+                BackupExportHistory.record(result)
+                if case .failure(let error) = result { store.error = error.localizedDescription }
+                document = nil
+            }
             .fileImporter(isPresented:$importer,allowedContentTypes:[.json,.plainText,.data]) { result in
                 do { let url = try result.get(), access = url.startAccessingSecurityScopedResource(); defer { if access { url.stopAccessingSecurityScopedResource() } }; incomingEnvelope = try store.readImport(url); incoming = incomingEnvelope?.data; importPassword = ""; localError = ""; importSheet = true }
                 catch { store.error = error.localizedDescription }
             }
             .sheet(isPresented:$encryptionSheet,onDismiss:{ password = ""; confirmation = "" }) { encryptionForm }
-            .sheet(isPresented:$importSheet,onDismiss:{ incoming = nil; incomingEnvelope = nil; importPassword = "" }) { importForm }
+            .sheet(isPresented:$importSheet,onDismiss:{
+                incoming = nil; incomingEnvelope = nil; importPassword = ""
+                if importSummary != nil { showImportSummary = true }
+            }) { importForm }
             .sheet(isPresented:$information) { informationView }
+            .alert(L("اكتمل الاستيراد"),isPresented:$showImportSummary,presenting:importSummary) { _ in
+                Button(L("حسنًا")) { importSummary = nil }
+            } message: { summary in Text(summary.message) }
             .alert(L("مجلد جديد"),isPresented:$folderPrompt) { TextField(L("اسم المجلد"),text:$newFolder); Button(L("إضافة")) { do { try store.addFolder(newFolder) } catch { store.error = L("اختر اسمًا جديدًا وغير فارغ، بحد أقصى ٨٠ حرفًا.") } }; Button(L("إلغاء"),role:.cancel) {} }
             .confirmationDialog(L("نقل جميع الأمثلة إلى المحذوفات؟"),isPresented:$removeSamples,titleVisibility:.visible) { Button(L("نقل الأمثلة"),role:.destructive) { store.removeSamples() } }
             .confirmationDialog(L("إزالة المجلد؟ ستبقى ملاحظاته محفوظة دون مجلد."),isPresented:$showFolderRemoval,titleVisibility:.visible) { Button(L("إزالة المجلد"),role:.destructive) { if let f = folderToRemove { store.removeFolder(f.id) } } }
@@ -95,8 +115,8 @@ struct SettingsView: View {
         NavigationStack {
             Form {
                 if let incoming {
-                    Section { Text(AppLanguage.isArabic ? "سيُضاف \(incoming.notes.count) من الملاحظات و\(incoming.folders.count) من المجلدات." : "Add \(incoming.notes.count) notes and \(incoming.folders.count) folders."); Text(L("لن تُستبدل ملاحظاتك. إعادة استيراد النسخة نفسها تنشئ نسخًا إضافية.")).font(.caption).foregroundStyle(.secondary) }
-                    Button(L("إضافة الملاحظات")) { do { try store.merge(incoming); importSheet = false } catch { localError = error.localizedDescription } }
+                    Section { Text(AppLanguage.isArabic ? "يحتوي الملف على \(incoming.notes.count) من الملاحظات و\(incoming.folders.count) من المجلدات." : "The file contains \(incoming.notes.count) notes and \(incoming.folders.count) folders."); Text(L("لن تُستبدل ملاحظاتك. إعادة استيراد النسخة نفسها تنشئ نسخًا إضافية.")).font(.caption).foregroundStyle(.secondary) }
+                    Button(L("إضافة الملاحظات")) { do { importSummary = try store.merge(incoming); importSheet = false } catch { localError = error.localizedDescription } }
                 } else {
                     SecureField(L("كلمة مرور النسخة الاحتياطية"),text:$importPassword).textContentType(.password)
                     Button { busy = true; localError = ""; Task { do { guard let envelope = incomingEnvelope else { throw WaraqaError.invalidBackup }; incoming = try await store.decodeImport(envelope,password:importPassword); importPassword = "" } catch { localError = error.localizedDescription }; busy = false } } label: { HStack { Text(L("فتح النسخة المشفرة")); Spacer(); if busy { ProgressView() } } }.disabled(busy || importPassword.isEmpty)
