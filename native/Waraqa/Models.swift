@@ -46,6 +46,47 @@ struct Note: Codable, Identifiable, Hashable {
     var words: Int { body.split(whereSeparator: \.isWhitespace).count }
 }
 struct NoteFolder: Codable, Identifiable, Hashable { var id = UUID().uuidString; var name: String }
+
+enum BackupExportHistory {
+    static let defaultsKey = "lastCompletedFullBackupExport"
+
+    // Record only the system exporter's successful completion, never preparation or a single-note export.
+    static func record(_ result: Result<URL, Error>, at date: Date = Date(), defaults: UserDefaults = .standard) {
+        guard case .success = result, date.timeIntervalSince1970.isFinite, date.timeIntervalSince1970 > 0 else { return }
+        defaults.set(date.timeIntervalSince1970, forKey: defaultsKey)
+    }
+
+    static func daysSince(_ timestamp: Double, now: Date, calendar: Calendar = .current) -> Int? {
+        guard timestamp.isFinite, timestamp > 0 else { return nil }
+        let exported = calendar.startOfDay(for: Date(timeIntervalSince1970: timestamp))
+        let today = calendar.startOfDay(for: now)
+        return max(0, calendar.dateComponents([.day], from: exported, to: today).day ?? 0)
+    }
+
+    static func label(_ timestamp: Double, now: Date, calendar: Calendar = .current) -> String {
+        guard let days = daysSince(timestamp, now: now, calendar: calendar) else { return L("لا يوجد تصدير كامل مسجّل على هذا الجهاز") }
+        if days == 0 { return L("آخر تصدير كامل: اليوم") }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = AppLanguage.locale
+        formatter.unitsStyle = .full
+        let age = formatter.localizedString(from: DateComponents(day: -days))
+        return AppLanguage.isArabic ? "آخر تصدير كامل: \(age)" : "Last full export: \(age)"
+    }
+}
+
+struct ImportSummary {
+    let notesAdded: Int
+    let foldersAdded: Int
+
+    var message: String {
+        let notes = notesAdded.formatted(.number.locale(AppLanguage.locale))
+        let folders = foldersAdded.formatted(.number.locale(AppLanguage.locale))
+        return AppLanguage.isArabic
+            ? "تم استيراد \(notes) من الملاحظات وإضافة \(folders) من المجلدات الجديدة. بقيت ملاحظاتك السابقة محفوظة، واحتفظت الملاحظات المستوردة بحالتها في الأرشيف أو المحذوفات."
+            : "Imported \(notes) notes and added \(folders) new folders. Your existing notes were kept. Imported notes retain their Archive or Trash status."
+    }
+}
+
 struct Notebook: Codable {
     var version = 1
     var folders: [NoteFolder] = []
@@ -70,7 +111,13 @@ struct Notebook: Codable {
         }.sorted { $0.pinned != $1.pinned ? $0.pinned : $0.updated > $1.updated }
     }
     static func normalized(_ value: String) -> String {
-        value.folding(options: [.diacriticInsensitive,.caseInsensitive], locale: Locale(identifier:"ar"))
+        // Foundation's diacritic folding leaves Arabic harakat intact on supported SDKs.
+        // Normalize only the search copy; never remove marks from the stored note.
+        let unmarked = value.precomposedStringWithCanonicalMapping.unicodeScalars.filter {
+            !(0x0610...0x061A).contains($0.value) && !(0x064B...0x065F).contains($0.value) && $0.value != 0x0670
+        }
+        return String(String.UnicodeScalarView(unmarked))
+            .folding(options: [.diacriticInsensitive,.caseInsensitive], locale: Locale(identifier:"ar"))
             .replacingOccurrences(of:"[أإآ]",with:"ا",options:.regularExpression)
             .replacingOccurrences(of:"ى",with:"ي")
     }
@@ -126,6 +173,10 @@ enum AppLanguage {
         "تصدير نسخة احتياطية": "Export backup",
         "استيراد ملاحظات": "Import notes",
         "نسخة من أفكارك": "Back up your thoughts",
+        "لا يوجد تصدير كامل مسجّل على هذا الجهاز": "No full export recorded on this device",
+        "آخر تصدير كامل: اليوم": "Last full export: today",
+        "افتح الإعدادات لتصدير نسخة عبر الملفات.": "Open Settings to export a backup through Files.",
+        "اكتمل الاستيراد": "Import complete",
         "ملاحظاتك غير مشمولة بنسخ iPhone الاحتياطية التلقائية. صدّر نسخة دورية عبر تطبيق الملفات واحتفظ بها خارج هذا الجهاز. حذف التطبيق يزيل ملاحظاته المحلية. ": "Notes are excluded from automatic iPhone backups. Export a copy regularly through Files and keep it outside this device. Deleting the app removes its local notes. ",
         "النسخة الكاملة مشفرة بكلمة مرور المساحة.": "The full backup uses your space password.",
         "النسخة الحالية قابلة للقراءة؛ احفظها في مكان موثوق.": "This backup is readable. Save it somewhere you trust.",
