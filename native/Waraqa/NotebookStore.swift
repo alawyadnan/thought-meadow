@@ -143,14 +143,18 @@ import CryptoKit
         let key = try await Task.detached { try VaultCrypto.derive(password:password,salt:salt) }.value
         return try VaultCrypto.open(envelope,key:key)
     }
-    func merge(_ incoming: Notebook) throws {
+    @discardableResult func merge(_ incoming: Notebook) throws -> ImportSummary {
         guard loaded, !locked else { throw WaraqaError.spaceLocked }
         let candidate = try notebook.merging(incoming)
         let next = try key.map { try VaultCrypto.seal(candidate,key:$0,salt:salt!) } ?? .clear(candidate)
         guard try JSONEncoder().encode(next).count <= 16_000_000 else { throw WaraqaError.storageLimit }
         let original = notebook, wasDirty = dirty
         notebook = candidate; dirty = true
-        do { try save(); activity() }
+        do {
+            try save(); activity()
+            return ImportSummary(notesAdded: candidate.notes.count - original.notes.count,
+                                 foldersAdded: candidate.folders.count - original.folders.count)
+        }
         catch { notebook = original; dirty = wasDirty; if wasDirty { changed() }; throw error }
     }
 }
